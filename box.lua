@@ -99,9 +99,6 @@ local box;box = setmetatable({identity = bidentity, tostring = btostring, even =
         end
         return b
     end
-    b.where = function(t)
-        return b
-    end
     b.order = function(t)
         local t_type = type(t)
         if t_type == "string" then

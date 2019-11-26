@@ -6,7 +6,7 @@ DivineLib = {
     _URL         = "https://pixelbot.org/DivineLib/"
 }
 
---[[module
+module
     .load("DivineLib", "net")
     .update(
         DivineLib._NAME,
@@ -17,7 +17,7 @@ DivineLib = {
                 core.reload()
             end
         end
-    )]]
+    )
 
 setmetatable(DivineLib, {
     __index = function(_, b)
