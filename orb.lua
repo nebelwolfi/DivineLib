@@ -1,6 +1,6 @@
 local util = module.load("DivineLib", "util")
 local pred = module.internal("pred")
-local isRiot = hanbot.isRiot
+local isRiot = hanbot.language == 2
 local getBuffStacks = util.getBuffStacks
 local objManager = objManager
 local player = objManager.player
@@ -78,16 +78,12 @@ local orb;orb = {
         for idx, f in pairs(orb.cb) do
             cb.add(cb[idx], f)
         end
-        for idx, f in pairs(orb[isRiot and "cb_riot" or "cb_cn"]) do
-            cb.add(cb[idx], f)
-        end
         orb.cb_self = {
             after_attack = {},
             pre_tick = {},
             out_of_range = {},
             pre_attack = {}
         }
-        objManager.loop(orb.cb_cn.createobj)
         -- bs.log("orb.init.return")
     end,
     setMenu = function(_m)
@@ -174,92 +170,93 @@ local orb;orb = {
             orb.config:dropdown("mouseOver", "Mouse over Player action", 2, {"Keep Walking", "Stop"})
             orb.config:slider("mouseOverRadius", "Mouse over Player radius", 100, 0, 300, 10)
             orb.config:boolean("leftClickLock", "Leftclick Target Lock", true)
-            if player.attackRange < 425 then
+            if player.attackRange < 425 or player.charName == "Nidalee" or player.charName == "Jayce" or player.charName == "Elise" then
                 orb.config:dropdown("sticky", "Stick to Target type", 2, {"Mouse around target", "Always", "Never"})
             end
-        else      orb.config = _m or menu("Nebelwolfis_Orb_" .. player.charName, "Nebelwolfi's Orb Walker")
-            orb.config:menu("combat", "ս������")
+        else
+            orb.config = _m or menu("Nebelwolfis_Orb_" .. player.charName, "Nebelwolfi's Orb Walker")
+            orb.config:menu("combat", "战斗设置")
                 orb.config.combat:header("s1", "General")
-                orb.config.combat:boolean("walk", "�ƶ�", true)
-                orb.config.combat:boolean("attack", "����", true)
-                orb.config.combat:header("s2", "��������Ŀ��")
-                orb.config.combat:boolean("champions", "Ӣ��", true)
-                orb.config.combat:boolean("pets", "����", true)
-                orb.config.combat:boolean("plants", "ֲ��", false)
-                orb.config.combat:boolean("structures", "������", true)
-            orb.config:menu("hybrid", "�������")
+                orb.config.combat:boolean("walk", "移动", true)
+                orb.config.combat:boolean("attack", "攻击", true)
+                orb.config.combat:header("s2", "攻击以下目标")
+                orb.config.combat:boolean("champions", "英雄", true)
+                orb.config.combat:boolean("pets", "宠物", true)
+                orb.config.combat:boolean("plants", "植物", false)
+                orb.config.combat:boolean("structures", "建筑物", true)
+            orb.config:menu("hybrid", "混合设置")
                 orb.config.hybrid:header("s1", "General")
-                orb.config.hybrid:boolean("walk", "�ƶ�", true)
-                orb.config.hybrid:boolean("attack", "����", true)
-                orb.config.hybrid:header("s2", "��������Ŀ��")
-                orb.config.hybrid:boolean("champions", "Ӣ��", true)
-                orb.config.hybrid:boolean("minions", "��", true)
-                orb.config.hybrid:boolean("pets", "����", true)
-                orb.config.hybrid:boolean("plants", "ֲ��", false)
-                orb.config.hybrid:boolean("structures", "������", true)
-                orb.config.hybrid:dropdown("priority", "����", 2, {"����", "ɧ��"})
-            orb.config:menu("last_hit", "��������")
+                orb.config.hybrid:boolean("walk", "移动", true)
+                orb.config.hybrid:boolean("attack", "攻击", true)
+                orb.config.hybrid:header("s2", "攻击以下目标")
+                orb.config.hybrid:boolean("champions", "英雄", true)
+                orb.config.hybrid:boolean("minions", "兵", true)
+                orb.config.hybrid:boolean("pets", "宠物", true)
+                orb.config.hybrid:boolean("plants", "植物", false)
+                orb.config.hybrid:boolean("structures", "建筑物", true)
+                orb.config.hybrid:dropdown("priority", "优先", 2, {"补刀", "骚扰"})
+            orb.config:menu("last_hit", "补刀设置")
                 orb.config.last_hit:header("s1", "General")
-                orb.config.last_hit:boolean("walk", "�ƶ�", true)
-                orb.config.last_hit:boolean("attack", "����", true)
-                orb.config.last_hit:header("s2", "��������Ŀ��")
-                orb.config.last_hit:boolean("minions", "Ӣ��", true)
-                orb.config.last_hit:boolean("pets", "����", true)
-                orb.config.last_hit:boolean("plants", "ֲ��", false)
-                orb.config.last_hit:boolean("structures", "������", true)
-            orb.config:menu("lane_clear", "��������")
+                orb.config.last_hit:boolean("walk", "移动", true)
+                orb.config.last_hit:boolean("attack", "攻击", true)
+                orb.config.last_hit:header("s2", "攻击以下目标")
+                orb.config.last_hit:boolean("minions", "英雄", true)
+                orb.config.last_hit:boolean("pets", "宠物", true)
+                orb.config.last_hit:boolean("plants", "植物", false)
+                orb.config.last_hit:boolean("structures", "建筑物", true)
+            orb.config:menu("lane_clear", "清线设置")
                 orb.config.lane_clear:header("s1", "General")
-                orb.config.lane_clear:boolean("walk", "�ƶ�", true)
-                orb.config.lane_clear:boolean("attack", "����", true)
-                orb.config.lane_clear:header("s2", "��������Ŀ��")
-                orb.config.lane_clear:boolean("minions", "��", true)
-                orb.config.lane_clear:boolean("pets", "����", true)
-                orb.config.lane_clear:boolean("plants", "ֲ��", false)
-                orb.config.lane_clear:boolean("structures", "������", true)
-                orb.config.lane_clear:header("s3", "�����߼�")
-                orb.config.lane_clear:boolean("wait", "�����һ�²���", true)
-                orb.config.lane_clear:boolean("turret", "���µȴ�", true)
-                orb.config.lane_clear:slider("waitDuration", "�ȴ�ʱ��", 200, 100, 200, 1)
-            orb.config:menu("jungle_clear", "��Ұ����")
+                orb.config.lane_clear:boolean("walk", "移动", true)
+                orb.config.lane_clear:boolean("attack", "攻击", true)
+                orb.config.lane_clear:header("s2", "攻击以下目标")
+                orb.config.lane_clear:boolean("minions", "兵", true)
+                orb.config.lane_clear:boolean("pets", "宠物", true)
+                orb.config.lane_clear:boolean("plants", "植物", false)
+                orb.config.lane_clear:boolean("structures", "建筑物", true)
+                orb.config.lane_clear:header("s3", "清线逻辑")
+                orb.config.lane_clear:boolean("wait", "等最后一下补刀", true)
+                orb.config.lane_clear:boolean("turret", "塔下等待", true)
+                orb.config.lane_clear:slider("waitDuration", "等待时间", 200, 100, 200, 1)
+            orb.config:menu("jungle_clear", "清野设置")
                 orb.config.jungle_clear:header("s1", "General")
-                orb.config.jungle_clear:boolean("walk", "�ƶ�", true)
-                orb.config.jungle_clear:boolean("attack", "����", true)
-                orb.config.jungle_clear:header("s2", "��������Ŀ��")
-                orb.config.jungle_clear:boolean("champions", "Ӣ��", true)
-                orb.config.jungle_clear:boolean("monsters", "Ұ��", true)
-                orb.config.jungle_clear:boolean("pets", "����", true)
-                orb.config.jungle_clear:boolean("plants", "ֲ��", true)
-                orb.config.jungle_clear:boolean("structures", "������", true)
-                orb.config.jungle_clear:dropdown("priority1", "����", 2, {"Ұ��", "Ӣ��"})
-                orb.config.jungle_clear:dropdown("priority2", "���� (Ұ��)", 1, {"С��", "���"})
-            orb.config:menu("draws", "��ΧȦ����")
-                orb.config.draws:header("s1", "��ΧȦ")
-                orb.config.draws:boolean("ownAA", "�Լ�������Χ", true)
-                orb.config.draws:boolean("enemyAA", "���˹�����Χ", true)
-                orb.config.draws:header("s2", "��")
-                orb.config.draws:boolean("cutMinions", "�ж�Ѫ��", true)
-                orb.config.draws:boolean("drawMinions", "��ʾ�������", true)
-                orb.config.draws:boolean("moveMinions", "��̬�������", true)
-                orb.config.draws:header("s3", "����")
-                orb.config.draws:boolean("state", "��ʾĿǰ״̬", false)
-                orb.config.draws:boolean("reatt", "��ʾ�´ι���ʱ��", false)
-                orb.config.draws:boolean("windup", "��ʾ��������ʱ��", false)
-            orb.config:menu("keys", "�ȼ�����")
-                orb.config.keys:header("s1", "ģʽ�ȼ�")
-                orb.config.keys:keybind("combat", "ս��ģʽ", 'Space')
-                orb.config.keys:keybind("hybrid", "���ģʽ", 'C')
-                orb.config.keys:keybind("last_hit", "����ģʽ", 'X')
-                orb.config.keys:keybind("lane_clear", "����ģʽ", 'V')
-                orb.config.keys:keybind("jungle_clear", "��Ұģʽ", 'V')
-                orb.config.keys:header("s2", "�����ȼ�")
-                orb.config.keys:keybind("lane_freeze", "����/���� �ȼ� (F6)", nil, 'F6')
-            orb.config:boolean("antiAFK", "��ֹ�һ�", true)
-            orb.config:dropdown("humanize", "���Ի�", 1, {"����", "�ƶ�+����", "�ٵ��"})
-            orb.config:dropdown("mouseOver", "���ͣ��Ӣ������ʱ", 2, {"�����ƶ�", "ֹͣ�ƶ�"})
-            orb.config:slider("mouseOverRadius", "���ͣ��Ӣ�����Ϸ�Χ", 100, 0, 300, 10)
+                orb.config.jungle_clear:boolean("walk", "移动", true)
+                orb.config.jungle_clear:boolean("attack", "攻击", true)
+                orb.config.jungle_clear:header("s2", "攻击以下目标")
+                orb.config.jungle_clear:boolean("champions", "英雄", true)
+                orb.config.jungle_clear:boolean("monsters", "野怪", true)
+                orb.config.jungle_clear:boolean("pets", "宠物", true)
+                orb.config.jungle_clear:boolean("plants", "植物", true)
+                orb.config.jungle_clear:boolean("structures", "建筑物", true)
+                orb.config.jungle_clear:dropdown("priority1", "优先", 2, {"野怪", "英雄"})
+                orb.config.jungle_clear:dropdown("priority2", "优先 (野怪)", 1, {"小怪", "大怪"})
+            orb.config:menu("draws", "范围圈设置")
+                orb.config.draws:header("s1", "范围圈")
+                orb.config.draws:boolean("ownAA", "自己攻击范围", true)
+                orb.config.draws:boolean("enemyAA", "敌人攻击范围", true)
+                orb.config.draws:header("s2", "兵")
+                orb.config.draws:boolean("cutMinions", "切断血量", true)
+                orb.config.draws:boolean("drawMinions", "显示补刀标记", true)
+                orb.config.draws:boolean("moveMinions", "动态补刀标记", true)
+                orb.config.draws:header("s3", "调试")
+                orb.config.draws:boolean("state", "显示目前状态", false)
+                orb.config.draws:boolean("reatt", "显示下次攻击时间", false)
+                orb.config.draws:boolean("windup", "显示攻击结束时间", false)
+            orb.config:menu("keys", "热键设置")
+                orb.config.keys:header("s1", "模式热键")
+                orb.config.keys:keybind("combat", "战斗模式", 'Space')
+                orb.config.keys:keybind("hybrid", "混合模式", 'C')
+                orb.config.keys:keybind("last_hit", "补刀模式", 'X')
+                orb.config.keys:keybind("lane_clear", "清线模式", 'V')
+                orb.config.keys:keybind("jungle_clear", "清野模式", 'V')
+                orb.config.keys:header("s2", "其他热键")
+                orb.config.keys:keybind("lane_freeze", "控线/冻线 热键 (F6)", nil, 'F6')
+            orb.config:boolean("antiAFK", "防止挂机", true)
+            orb.config:dropdown("humanize", "人性化", 1, {"毫无", "移动+攻击", "假点击"})
+            orb.config:dropdown("mouseOver", "鼠标停在英雄身上时", 2, {"继续移动", "停止移动"})
+            orb.config:slider("mouseOverRadius", "鼠标停在英雄身上范围", 100, 0, 300, 10)
             orb.config:boolean("leftClickLock", "Leftclick Target Lock", true)
-            if player.attackRange < 425 then
-                orb.config:dropdown("sticky", "�����", 2, {"�����Ŀ����Χ", "����", "����"})
+            if player.attackRange < 425 or player.charName == "Nidalee" or player.charName == "Jayce" or player.charName == "Elise" then
+                orb.config:dropdown("sticky", "黏类型", 2, {"鼠标在目标周围", "总是", "永不"})
             end
         end
         orb.config.mouseOverRadius:set("callback", function() orb.lastMouseOverChange = game.time + 3 end)
@@ -835,7 +832,7 @@ local orb;orb = {
                     math.max(0, player.pos2D:dist(unit.pos2D)-unit.boundingRadius-player.boundingRadius))
                 / player:basicAttack(0).static.missileSpeed
                 or 0)
-            + network.latency
+            + network.latency * .5
         local delta2 = orb.getReattackTime() + delta
         -- bs.log("orb.pH.return")
         return orb.predictHealthF(unit, delta), orb.predictHealthF(unit, delta2)
@@ -851,10 +848,7 @@ local orb;orb = {
                     if attack.estimatedTimeOfHit < game.time then
                         -- bs.log("orb.pHF.etoh")
                         orb.health_pred[ptr] = nil
-                    elseif attack.projectile
-                        and attack.projectile.pos2D:dist(unit.pos2D) / attack.projectileSpeed <= delta
-                        or attack.estimatedTimeOfHit <= game.time + delta
-                    then
+                    elseif attack.estimatedTimeOfHit <= game.time + delta then
                         -- bs.log("orb.pHF.recalc")
                         health = health - util.calculateFullAADamage(unit, attacker)
                     else
@@ -879,7 +873,7 @@ local orb;orb = {
                 end
                 if unit.ptr == player.ptr then
                     orb.state = "ATTACKING"
-                    orb.lastAA = game.time + network.latency * 0.5
+                    orb.lastAA = game.time - network.latency * .5
                     -- print(spell.slot, spell.windUpTime * player.attackSpeedMod, player:basicAttack(0).windUpTime)
                     -- print(spell.animationTime, 1/spell.animationTime, 1/(player.attackSpeedMod*spell.animationTime))
                     orb.windUpTime = spell.windUpTime
@@ -892,6 +886,15 @@ local orb;orb = {
                         isMelee = isMelee,
                         estimatedTimeOfHit = eta,
                         projectileSpeed = speed
+                    }
+                else
+                    local unit = spell.owner
+                    local speed = unit:basicAttack(0).static.missileSpeed
+                    local eta = game.time + unit.pos2D:dist(spell.target.pos2D) / speed
+                    orb.health_pred[unit.ptr] = {
+                        target = spell.target,
+                        isMelee = false,
+                        estimatedTimeOfHit = eta,
                     }
                 end
             elseif spell.owner == player and orb.state == "ATTACKING" then
@@ -1186,25 +1189,7 @@ local orb;orb = {
                     orb.leftClickLockedTarget = target
                 end
             end
-        end
-    },
-    cb_cn = {
-        createobj = function(obj)
-            if obj.type == TYPE_MISSILE then
-                orb.cb_riot.create_missile(obj)
-            elseif obj.type == TYPE_MINION then
-                orb.cb_riot.create_minion(obj)
-            end
         end,
-        deleteobj = function(obj)
-            if obj.type == TYPE_MISSILE then
-                orb.cb_riot.delete_missile(obj)
-            elseif obj.type == TYPE_MINION then
-                orb.cb_riot.delete_minion(obj)
-            end
-        end,
-    },
-    cb_riot = {
         create_missile = function(missile)
             -- bs.log("orb.create_missile")
             local spell = missile.spell
@@ -1219,19 +1204,18 @@ local orb;orb = {
                     end
                 end
                 if spell.target then
-                    local speed = missile.speed
-                    local eta = (
-                        game.time
-                        + missile.pos2D:dist(spell.target.pos2D) / speed
-                    )
                     local unit = spell.owner
-                    orb.health_pred[unit.ptr] = {
-                        target = spell.target,
-                        isMelee = false,
-                        estimatedTimeOfHit = eta,
-                        projectile = missile,
-                        projectileSpeed = speed
-                    }
+                    if orb.health_pred[unit.ptr] and orb.health_pred[unit.ptr].target.ptr == spell.target.ptr then
+                        orb.health_pred[unit.ptr].projectile = missile
+                    else
+                        local eta = game.time + unit.pos2D:dist(spell.target.pos2D) / missile.speed
+                        orb.health_pred[unit.ptr] = {
+                            target = spell.target,
+                            isMelee = false,
+                            estimatedTimeOfHit = eta,
+                            projectile = missile,
+                        }
+                    end
                 end
             end
             -- bs.log("orb.create_missile.return")
