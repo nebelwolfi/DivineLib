@@ -404,7 +404,7 @@ local function calculateFullAADamage(target, source, addad, addap, addtrue)
             ad, ap, tr = bonusDamageTable[source.charName](source, target, ad, ap, tr)
         end
         return calculatePhysicalDamage(target, source, ad)
-            + calculateMagicalDamage(target, source, ap) + tr
+            + calculateMagicalDamage(target, source, ap) + (tr or 0)
     elseif source.type == TYPE_MINION then
         if target.type == TYPE_MINION then
             return calculatePhysicalDamage(target, source, source.baseAttackDamage * source.percentDamageToBarracksMinionMod) - target.flatDamageReductionFromBarracksMinionMod
@@ -627,14 +627,13 @@ local function VectorIntersection(a1, b1, a2, b2)
     return divisor ~= 0 and vec2(px / divisor, py / divisor)
 end
 
-local function CountObjectsOnLineSegment(source, EndPos, width, objects, count, valid)
+local function CountObjectsOnLineSegment(source, EndPos, radius, objects, count, valid)
     local n = 0
     for i = 0, count - 1 do
         local object = objects[i]
         if valid(object) then
             local pointSegment, _, isOnSegment = VectorPointProjectionOnLineSegment(source, EndPos, object)
-            local w = width
-            if isOnSegment and object.pos2D:distSqr(pointSegment) < w * w
+            if isOnSegment and object.pos2D:distSqr(pointSegment) < radius * radius
                            and source:distSqr(EndPos) > source:distSqr(object.pos) then
                 n = n + 1
             end
@@ -643,7 +642,7 @@ local function CountObjectsOnLineSegment(source, EndPos, width, objects, count, 
     return n
 end
 
-local function GetLineFarmPosition(source, range, width, objects, count, valid)
+local function GetLineFarmPosition(source, range, radius, objects, count, valid)
     local BestPos
     local BestHit = 0
     for i = 0, count - 1 do
@@ -653,10 +652,10 @@ local function GetLineFarmPosition(source, range, width, objects, count, valid)
                 return object, 1
             end
             local EndPos = source.pos + range * (object.pos - source.pos):norm()
-            local hit = CountObjectsOnLineSegment(source.pos, EndPos, width, objects, count, valid)
+            local hit = CountObjectsOnLineSegment(source.pos, EndPos, radius, objects, count, valid)
             if hit > BestHit then
                 BestHit = hit
-                BestPos = object
+                BestPos = object.pos
                 if BestHit == count - 1 then
                     break
                 end
@@ -710,7 +709,7 @@ return {
     getPhysicalReduction = getPhysicalReduction,
     getMagicalReduction = getMagicalReduction,
     getTowerMinionDamage = getTowerMinionDamage,
-    
+
     makeGetPercentStatFunc = makeGetPercentStatFunc,
     makeObjectInRangeFunc = makeObjectInRangeFunc,
 
