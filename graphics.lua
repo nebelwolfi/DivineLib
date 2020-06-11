@@ -71,14 +71,11 @@ VS_OUTPUT VS(VS_OUTPUT input) {
   return output;
 }
 
-float segment_distance(float2 p, float2 p1, float2 p2, float width) {
-    float2 center = (p1 + p2) * 0.5;
-    float len = length(p2 - p1) - width * 0.5 + .5;
-    float2 dir = (p2 - p1) / len;
-    float2 rel_p = p - center;
-    float dist1 = abs(dot(rel_p, float2(dir.y, -dir.x)));
-    float dist2 = abs(dot(rel_p, dir)) - 0.5*len;
-    return max(dist1, dist2);
+float GetPointDistanceToLine(float x1, float z1, float x2, float z2, float x3, float z3)
+{
+	float dz = z3 - z2;
+	float dx = x3 - x2;
+	return ((z3 - z2) * x1 - (x3 - x2) * z1 + x3 * z2 - z3 * x2) / sqrt(dz * dz + dx * dx);
 }
 
 float4 PS(VS_OUTPUT input): COLOR
@@ -88,14 +85,34 @@ float4 PS(VS_OUTPUT input): COLOR
 
   float4 v = output.Position;
   
-  float dist = segment_distance(v.xy, spos, epos, lineWidth);
-
-  float outer = lineWidth > 2. ? lineWidth * (1. - 1. / lineWidth) : lineWidth;
+  float2 perp = float2(-(epos.y - spos.y), epos.x - spos.x);
+  perp = perp / sqrt(perp.x * perp.x + perp.y * perp.y);
+  float lineRadius = lineWidth * .5;
+  float2 edge0 = float2(spos.x - perp.x * lineRadius, spos.y - perp.y * lineRadius);
+  float2 edge1 = float2(spos.x + perp.x * lineRadius, spos.y + perp.y * lineRadius);
+  float2 edge2 = float2(epos.x + perp.x * lineRadius, epos.y + perp.y * lineRadius);
+  float2 edge3 = float2(epos.x - perp.x * lineRadius, epos.y - perp.y * lineRadius);
+  float dist = GetPointDistanceToLine(v.x, v.y, edge0.x, edge0.y, edge1.x, edge1.y);
+  if (dist < 0.)
+    return output.Color;
+  float d = GetPointDistanceToLine(v.x, v.y, edge1.x, edge1.y, edge2.x, edge2.y);
+  if (d < 0.)
+    return output.Color;
+  dist = min(d, dist);
+  d = GetPointDistanceToLine(v.x, v.y, edge2.x, edge2.y, edge3.x, edge3.y);
+  if (d < 0.)
+    return output.Color;
+  dist = min(d, dist);
+  d = GetPointDistanceToLine(v.x, v.y, edge3.x, edge3.y, edge0.x, edge0.y);
+  if (d < 0.)
+    return output.Color;
+  dist = min(d, dist);
+  
   output.Color.xyz = color.xyz;
-  if (dist < lineWidth * .5 + .5)
-    output.Color.w = lineWidth > 1. ? color.w - color.w * smoothstep(1. - 2. / lineWidth, 1., dist / outer) : color.w;
+  if (spos.x != epos.x && spos.y != epos.y)
+    output.Color.w = color.w - color.w * smoothstep(.95, 1., 1. - dist / lineRadius);
   else
-    output.Color.w = 0.;
+    output.Color.w = color.w;
 
   return output.Color;
 }
@@ -128,7 +145,7 @@ function _g.color_to_vec4(color)
 end
 
 function g.draw_circle_2D(x, y, radius, width, color, pts_n)
-  if _g.circle == 0 then
+  if not _g.circle then
     return
   end
   shadereffect.begin(_g.circle, 0, false)
@@ -141,7 +158,7 @@ function g.draw_circle_2D(x, y, radius, width, color, pts_n)
 end
 
 function g.draw_circle_xyz(x, y, z, radius, width, color, pts_n)
-  if _g.circle == 0 then
+  if not _g.circle then
     return
   end
   shadereffect.begin(_g.circle, y, true)
@@ -158,7 +175,7 @@ function g.draw_circle(v1, radius, width, color, pts_n)
 end
 
 function g.draw_line_2D(x1, y1, x2, y2, width, color)
-  if _g.line == 0 then
+  if not _g.line then
     return
   end
   shadereffect.begin(_g.line, 0, false)
@@ -169,10 +186,14 @@ function g.draw_line_2D(x1, y1, x2, y2, width, color)
   shadereffect.draw(_g.line)
 end
 
-graphics.set('draw_circle', g.draw_circle)
-graphics.set('draw_circle_2D', g.draw_circle_2D)
-graphics.set('draw_circle_xyz', g.draw_circle_xyz)
-graphics.set('draw_line_2D', g.draw_line_2D)
+if _g.circle then
+  graphics.set('draw_circle', g.draw_circle)
+  graphics.set('draw_circle_2D', g.draw_circle_2D)
+  graphics.set('draw_circle_xyz', g.draw_circle_xyz)
+end
+if _g.line then
+  graphics.set('draw_line_2D', g.draw_line_2D)
+end
 
 return setmetatable(g, 
 {
