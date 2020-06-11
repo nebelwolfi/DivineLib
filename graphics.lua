@@ -90,12 +90,12 @@ float4 PS(VS_OUTPUT input): COLOR
   
   float dist = segment_distance(v.xy, spos, epos);
 
-  float outer = lineWidth * 0.9;
+  float outer = lineWidth * (1. - 1. / lineWidth);
   output.Color.xyz = color.xyz;
-  if (dist < outer)
-    output.Color.w = 1. * smoothstep(1. - 2. / lineWidth, 1., dist / outer);
+  if (dist < lineWidth)
+    output.Color.w = 1. - 1. * smoothstep(1. - 2. / lineWidth, 1., dist / outer);
   else
-    output.Color.w = 1.;
+    output.Color.w = 0.;
 
   return output.Color;
 }
