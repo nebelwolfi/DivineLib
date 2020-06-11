@@ -71,9 +71,9 @@ VS_OUTPUT VS(VS_OUTPUT input) {
   return output;
 }
 
-float segment_distance(float2 p, float2 p1, float2 p2) {
+float segment_distance(float2 p, float2 p1, float2 p2, float width) {
     float2 center = (p1 + p2) * 0.5;
-    float len = length(p2 - p1);
+    float len = length(p2 - p1) - width * 0.5 + .5;
     float2 dir = (p2 - p1) / len;
     float2 rel_p = p - center;
     float dist1 = abs(dot(rel_p, float2(dir.y, -dir.x)));
@@ -88,12 +88,12 @@ float4 PS(VS_OUTPUT input): COLOR
 
   float4 v = output.Position;
   
-  float dist = segment_distance(v.xy, spos, epos);
+  float dist = segment_distance(v.xy, spos, epos, lineWidth);
 
-  float outer = lineWidth * (1. - 1. / lineWidth);
+  float outer = lineWidth > 2. ? lineWidth * (1. - 1. / lineWidth) : lineWidth;
   output.Color.xyz = color.xyz;
-  if (dist < lineWidth)
-    output.Color.w = 1. - 1. * smoothstep(1. - 2. / lineWidth, 1., dist / outer);
+  if (dist < lineWidth * .5 + .5)
+    output.Color.w = lineWidth > 1. ? color.w - color.w * smoothstep(1. - 2. / lineWidth, 1., dist / outer) : color.w;
   else
     output.Color.w = 0.;
 
@@ -131,7 +131,7 @@ function g.draw_circle_2D(x, y, radius, width, color, pts_n)
   if _g.circle == 0 then
     return
   end
-  shadereffect.begin(_g.circle, 0, true)
+  shadereffect.begin(_g.circle, 0, false)
   shadereffect.set_float(_g.circle, 'Is3D', 0)
   shadereffect.set_float(_g.circle, 'radius', radius)
   shadereffect.set_float(_g.circle, 'lineWidth', width)
@@ -161,8 +161,8 @@ function g.draw_line_2D(x1, y1, x2, y2, width, color)
   if _g.line == 0 then
     return
   end
-  shadereffect.begin(_g.line, y, true)
-  shadereffect.set_float(_g.line, 'lineWidth', width + .5)
+  shadereffect.begin(_g.line, 0, false)
+  shadereffect.set_float(_g.line, 'lineWidth', width)
   shadereffect.set_vec2(_g.line, 'spos', vec2(x1, y1))
   shadereffect.set_vec2(_g.line, 'epos', vec2(x2, y2))
   shadereffect.set_color(_g.line, 'color', color)
