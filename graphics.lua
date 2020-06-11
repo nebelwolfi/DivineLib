@@ -49,8 +49,73 @@ technique Movement
 }
 ]]
 
+local linebytes = [[
+struct VS_OUTPUT
+{
+    float4 Input    : POSITION;
+    float4 Color    : COLOR0;
+    float4 Position : TEXCOORD0;
+};
+
+float4x4 Transform;
+float2 spos;
+float2 epos;
+float4 color;
+float lineWidth;
+
+VS_OUTPUT VS(VS_OUTPUT input) {
+  VS_OUTPUT output = (VS_OUTPUT) 0;
+  output.Input = mul(input.Input, Transform);
+  output.Color = input.Color;
+  output.Position = input.Input;
+  return output;
+}
+
+float segment_distance(float2 p, float2 p1, float2 p2) {
+    float2 center = (p1 + p2) * 0.5;
+    float len = length(p2 - p1);
+    float2 dir = (p2 - p1) / len;
+    float2 rel_p = p - center;
+    float dist1 = abs(dot(rel_p, float2(dir.y, -dir.x)));
+    float dist2 = abs(dot(rel_p, dir)) - 0.5*len;
+    return max(dist1, dist2);
+}
+
+float4 PS(VS_OUTPUT input): COLOR
+{
+  VS_OUTPUT output = (VS_OUTPUT) 0;
+  output = input;
+
+  float4 v = output.Position;
+  
+  float dist = segment_distance(v.xy, spos, epos);
+
+  float outer = lineWidth * 0.9;
+  output.Color.xyz = color.xyz;
+  if (dist < outer)
+    output.Color.w = 1. * smoothstep(1. - 2. / lineWidth, 1., dist / outer);
+  else
+    output.Color.w = 1.;
+
+  return output.Color;
+}
+
+technique Movement
+{
+  pass P0 {
+    ZEnable = FALSE;
+    AlphaBlendEnable = TRUE;
+    DestBlend = InvSrcAlpha;
+    SrcBlend = SrcAlpha;
+    VertexShader = compile vs_3_0 VS();
+    PixelShader = compile ps_3_0 PS();
+  }
+}
+]]
+
 local _g, g = {
-  circle = shadereffect.construct(circlebytes, false)
+  circle = shadereffect.construct(circlebytes, false),
+  line = shadereffect.construct(linebytes, false),
 }, {}
 
 function _g.color_to_vec4(color)
@@ -92,9 +157,22 @@ function g.draw_circle(v1, radius, width, color, pts_n)
   g.draw_circle_xyz(v1.x, v1.y, v1.z, radius, width + 5.5, color)
 end
 
+function g.draw_line_2D(x1, y1, x2, y2, width, color)
+  if _g.line == 0 then
+    return
+  end
+  shadereffect.begin(_g.line, y, true)
+  shadereffect.set_float(_g.line, 'lineWidth', width + .5)
+  shadereffect.set_vec2(_g.line, 'spos', vec2(x1, y1))
+  shadereffect.set_vec2(_g.line, 'epos', vec2(x2, y2))
+  shadereffect.set_color(_g.line, 'color', color)
+  shadereffect.draw(_g.line)
+end
+
 graphics.set('draw_circle', g.draw_circle)
 graphics.set('draw_circle_2D', g.draw_circle_2D)
 graphics.set('draw_circle_xyz', g.draw_circle_xyz)
+graphics.set('draw_line_2D', g.draw_line_2D)
 
 return setmetatable(g, 
 {
